@@ -1,5 +1,4 @@
 import express from "express";
-import cors from "cors";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -10,7 +9,14 @@ if (!ANTHROPIC_API_KEY) {
   process.exit(1);
 }
 
-app.use(cors());
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.sendStatus(200);
+  next();
+});
+
 app.use(express.json({ limit: "2mb" }));
 
 app.get("/health", (_, res) => res.json({ ok: true }));
@@ -26,13 +32,8 @@ app.post("/v1/messages", async (req, res) => {
       },
       body: JSON.stringify(req.body),
     });
-
     const data = await response.json();
-
-    if (!response.ok) {
-      return res.status(response.status).json(data);
-    }
-
+    if (!response.ok) return res.status(response.status).json(data);
     res.json(data);
   } catch (err) {
     console.error("Proxy error:", err.message);
